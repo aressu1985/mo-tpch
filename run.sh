@@ -115,9 +115,12 @@ function load() {
       local sql="load data infile '${WORKSPACE}/${tbl}' into table ${DBNAME}.${table} FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n';"
       echo -e "Loading ${tbl} in to table ${table},please wait....."
       echo "${sql}"
+      startTime=`date +%s.%N`
       mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} -e "${sql}" 2>/dev/null
       if [ $? -eq 0 ];then
-          echo -e "The data for table ${table} has been loaded successfully."
+	  endTime=`date +%s.%N`
+          getTiming $startTime $endTime
+          echo -e "The data for table ${table} has been loaded successfully,,and cost: ${cost}"
       else
           echo -e "The data for table ${table} has failed to be loaded."
       fi

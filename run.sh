@@ -56,11 +56,12 @@ do
         echo -e "   -l  load the tpch data to mo server,must specify scale by -s,and the mo server info by -h,-P,-u,-p"
         echo -e "   -c  create the table in mo server,must specify the mo server info by -h,-P,-u,-p"
         echo -e "Examples:"
-        echo "   bash run.sh -g -s 1"
-        echo -e "   bash run.sh -l -s 1"
-        echo -e "   bash run.sh -c -P 3306"
-        echo -e "   bash run.sh -q q1"
-        echo "For more support,please email to dong.su@matrixorigin.io"
+        echo "   bash run.sh -g -s 1        #to generate tpch data with scale[1G] to the dir[./data/1]"
+	echo -e "   bash run.sh -l -s 1        #to load tpch data from the dir[./data/1] to MO,default addr and auth (127.0.0.1:6001 dump/111) "
+        echo -e "   bash run.sh -c -s 1        #to create tpch tables in MO,dbname is tpch_1g"
+        echo -e "   bash run.sh -q q1 -s 1     #to run the query q1 with 1G data"
+        echo -e "   bash run.sh -q all -s 0.5  #to run all the queries with 0.5G data"
+	echo "For more support,please email to sudong@matrixorigin.io"
         exit 1
         ;;
         ?)

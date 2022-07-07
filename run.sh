@@ -150,7 +150,7 @@ function query() {
     if [ "${QUERY}"x != "all"x ];then
       echo -e "Now start to execute the query ${QUERY},please wait....."
        startTime=`date +%s.%N`
-      result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql`
+      timeout 7200s result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql`
        if [ $? -eq 0 ];then
           endTime=`date +%s.%N`
           #cost=$[ $endTime - $startTime ]

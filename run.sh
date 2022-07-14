@@ -83,10 +83,10 @@ function gen() {
   ./dbgen -s ${SCALE}
   mv *.tbl ../data/${SCALE}/
   cd ${WORKSPACE}/data/${SCALE}/
-  mv lineitem.tbl lineitem.tbl.old
-  mv partsupp.tbl partsupp.tbl.old
-  sed = lineitem.tbl.old | sed 'N;s/\n/|/' > lineitem.tbl
-  sed = partsupp.tbl.old | sed 'N;s/\n/|/' > partsupp.tbl
+  #mv lineitem.tbl lineitem.tbl.old
+  #mv partsupp.tbl partsupp.tbl.old
+  #sed = lineitem.tbl.old | sed 'N;s/\n/|/' > lineitem.tbl
+  #sed = partsupp.tbl.old | sed 'N;s/\n/|/' > partsupp.tbl
   cd ${WORKSPACE}
 }
 
@@ -150,7 +150,7 @@ function query() {
     if [ "${QUERY}"x != "all"x ];then
       echo -e "Now start to execute the query ${QUERY},please wait....."
        startTime=`date +%s.%N`
-      timeout 7200s result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql`
+       result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql`
        if [ $? -eq 0 ];then
           endTime=`date +%s.%N`
           #cost=$[ $endTime - $startTime ]

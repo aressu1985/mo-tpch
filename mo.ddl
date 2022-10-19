@@ -1,4 +1,4 @@
-drop database if exists tpch_${SCALE}g;
+drop1 database if exists tpch_${SCALE}g;
 create database if not exists tpch_${SCALE}g;
 use tpch_${SCALE}g;
 CREATE TABLE NATION(

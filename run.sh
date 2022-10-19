@@ -2,7 +2,6 @@
 
 if [[ $# -eq 0 ]];then
     echo "No parameters provided,please use -H to get help. "
-
 fi
 
 WORKSPACE=$(cd `dirname $0`; pwd)
@@ -76,38 +75,38 @@ function execute() {
 
 
 function gen() {
-  echo -e "Start to generate tpch data scale[${SCALE}G] to the path ./data/${SCALE}"
+  echo -e "Start to generate tpch data scale[${SCALE}G] to the path ./data/${SCALE}" | tee -a ${WORKSPACE}/run.log
   cd ${WORKSPACE}
   mkdir -p data/${SCALE}
   cd ${WORKSPACE}/dbgen
+  make
   ./dbgen -s ${SCALE}
+  if [ $? -eq 0 ];then
+    echo -e "The data for tpch with scale ${SCALE}G has been created successfully." | tee -a ${WORKSPACE}/run.log
+  else
+    echo -e "The data for tpch with scale ${SCALE}G has been created failed." | tee -a ${WORKSPACE}/run.log
+    exit 1
+  fi
   mv *.tbl ../data/${SCALE}/
   cd ${WORKSPACE}/data/${SCALE}/
-  #mv lineitem.tbl lineitem.tbl.old
-  #mv partsupp.tbl partsupp.tbl.old
-  #sed = lineitem.tbl.old | sed 'N;s/\n/|/' > lineitem.tbl
-  #sed = partsupp.tbl.old | sed 'N;s/\n/|/' > partsupp.tbl
   cd ${WORKSPACE}
 }
 
 function ctab() {
-    echo -e "Start to creat table for tpch test in mo server,please wait....."
-    cp mo.ddl tpch_table_temp.sql
-    sed -i 's/tpch_${SCALE}g/tpch_'${SCALE/./_}'g/g' tpch_table_temp.sql
-    #echo "mysql -h${SERVER} -P${PORT} -u${USER} -p{PASS} < tpch_table_temp.sql"
-    mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} < tpch_table_temp.sql
-    if [ $? -eq 0 ];then
-      echo -e "The tables for tpch has been created successfully."
-    else
-      #local  result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} < tpch_table_temp.sql`
-      #echo ${result}
-      echo -e "The tables for tpch has been created failed."
-    fi
-    #rm -rf tpch_table_temp.sql
+  echo -e "Start to creat table for tpch test in mo server,please wait....."| tee -a ${WORKSPACE}/run.log
+  cp mo.ddl tpch_table_temp.sql
+  sed -i  's/tpch_${SCALE}g/tpch_'${SCALE/./_}'g/g' tpch_table_temp.sql
+  result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} < tpch_table_temp.sql`
+  if [ $? -eq 0 ];then
+    echo -e "The tables for tpch has been created successfully." | tee -a ${WORKSPACE}/run.log
+  else
+    echo -e "The tables for tpch has been created failed." | tee -a ${WORKSPACE}/run.log
+    exit 1
+  fi
 }
 
 function load() {
-    echo -e "Start to load tpch ${SCALE}G data to mo server,please wait....."
+    echo -e "Start to load tpch ${SCALE}G data to mo server,please wait....." | tee -a ${WORKSPACE}/run.log
     DBNAME=tpch_${SCALE/./_}g
     for tbl in data/${SCALE}/*.tbl
     do
@@ -118,21 +117,14 @@ function load() {
       startTime=`date +%s.%N`
       mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} -e "${sql}" 2>/dev/null
       if [ $? -eq 0 ];then
-	  endTime=`date +%s.%N`
-          getTiming $startTime $endTime
-          echo -e "The data for table ${table} has been loaded successfully,,and cost: ${cost}"
+	      endTime=`date +%s.%N`
+        getTiming $startTime $endTime
+        echo -e "The data for table ${table} has been loaded successfully,,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
       else
-          echo -e "The data for table ${table} has failed to be loaded."
+        echo -e "The data for table ${table} has failed to be loaded." | tee -a ${WORKSPACE}/run.log
+        exit 1
       fi
     done
-#     echo -e "Loading lineitem.tbl into table lineitem,please wait....."
-#     echo "load data infile '${WORKSPACE}/data/lineitem.tbl' into table TPCH.lineitem FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n';"
-#     mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} -e "load data infile '${WORKSPACE}/data/lineitem.tbl' into table TPCH.lineitem FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n';"
-#     if [ $? -eq 0 ];then
-#        echo -e "The data for table lineitem has been loaded successfully."
-#     else
-#        echo -e "The data for table lineitem has failed to be loaded."
-#     fi
 }
 
 function query() {
@@ -144,47 +136,51 @@ function query() {
         mkdir -p ${WORKSPACE}/report/res_${SCALE}/
     fi
     rm -rf ${WORKSPACE}/report/rt_${SCALE}.txt
-    #mkdir -p ${WORKSPACE}/report/${SCALE}
-    #mkdir -p ${WORKSPACE}/report/${SCALE}/result/
+    
     DBNAME=tpch_${SCALE/./_}g
     if [ "${QUERY}"x != "all"x ];then
-      echo -e "Now start to execute the query ${QUERY},please wait....."
-       startTime=`date +%s.%N`
-       result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql`
-       if [ $? -eq 0 ];then
-          endTime=`date +%s.%N`
-          #cost=$[ $endTime - $startTime ]
-          getTiming $startTime $endTime
-          echo -e "The query ${QUERY}  has been executed successfully,and cost: ${cost}"
-	  echo "${QUERY} : ${cost}" >> ${WORKSPACE}/report/rt_${SCALE}.txt
-          echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res
-	  #echo -e "\n"
-       else
-          echo -e "TThe query ${QUERY}  has failed to  been executed."
-	  echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res
-          #echo -e "\n"
-       fi
+      echo -e "Now start to execute the query ${QUERY},please wait....." | tee -a ${WORKSPACE}/run.log
+      startTime=`date +%s.%N`
+      result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql`
+      if [ $? -eq 0 ];then
+        endTime=`date +%s.%N`
+        getTiming $startTime $endTime
+        echo -e "The query ${QUERY}  has been executed successfully,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
+        echo "${QUERY}:${cost}" >> ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
+        echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
+      else
+        echo -e "TThe query ${QUERY}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
+        echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
+      fi
     else
        for sql in queries/*
        do
          QUERY=${sql}
-	 local name=`basename ${sql} .sql`
+	       local name=`basename ${sql} .sql`
          echo -e "Now start to execute the query ${QUERY},please wait....."
          startTime=`date +%s.%N`
-         result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < ${QUERY}`
+         result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < ${QUERY}` | tee -a ${WORKSPACE}/run.log
          if [ $? -eq 0 ];then
            endTime=`date +%s.%N`
            getTiming $startTime $endTime
-           echo -e "The query ${QUERY}  has been executed successfully,and cost: ${cost}"
-	   echo "${name} : ${cost}" >> ${WORKSPACE}/report/rt_${SCALE}.txt
-	   echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${name}.res
-           #echo -e "\n"
+           echo -e "The query ${QUERY}  has been executed successfully,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
+	         echo "${name} : ${cost}" >> ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
+	         echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${name}.res | tee -a ${WORKSPACE}/run.log
          else
-           echo -e "TThe query ${QUERY}  has failed to  been executed."
+           echo -e "TThe query ${QUERY}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
            #echo -e "\n"
          fi
        done
     fi
+}
+
+function checkScale() {
+      #check whether ${SCALE} is a number
+      expr ${SCALE} "+" 10 &> /dev/null
+      if [ $? -ne 0 ]; then
+        echo 'The scale['${SCALE}'] is not a number' | tee -a ${WORKSPACE}/run.log
+        exit 1
+      fi
 }
 
 function getTiming(){
@@ -202,19 +198,32 @@ function getTiming(){
     cost=${time_ms}
 }
 
+checkScale
+
 if [ "${METHOD}"x = "GEN"x ];then
   gen
+  exit 0
 fi
 
 if [ "${METHOD}"x = "CTAB"x ];then
   ctab
+  exit 0
 fi
 
 if [ "${METHOD}"x = "LOAD"x ];then
   load
+  exit 0
 fi
 
 if [ "${METHOD}"x = "QUERY"x ];then
   #echo "${QUERY}"
+  query
+  exit 0
+fi
+
+if [ "${METHOD}"x = x ];then
+  gen
+  ctab
+  load
   query
 fi

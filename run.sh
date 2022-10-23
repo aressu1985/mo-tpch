@@ -178,8 +178,25 @@ function checkScale() {
       #check whether ${SCALE} is a number
       expr ${SCALE} "+" 10 &> /dev/null
       if [ $? -ne 0 ]; then
-        echo 'The scale['${SCALE}'] is not a number' | tee -a ${WORKSPACE}/run.log
-        exit 1
+        if [ ! -z $(echo ${SCALE} | sed 's/[^.]//g') ] ; then
+          decimalPart="$(echo ${SCALE} | cut -d. -f1)"
+          fractionalPart="$(echo ${SCALE} | cut -d. -f2)"
+          expr ${decimalPart} "+" 10 &> /dev/null
+          if [ $? -ne 0 ]; then
+            echo 'The scale['${SCALE}'] is not a number' | tee -a ${WORKSPACE}/run.log
+            exit 1
+          fi 
+          
+          expr ${fractionalPart} "+" 10 &> /dev/null
+          if [ $? -ne 0 ]; then
+            echo 'The scale['${SCALE}'] is not a number' | tee -a ${WORKSPACE}/run.log
+            exit 1
+          fi 
+          
+        else
+          echo 'The scale['${SCALE}'] is not a number' | tee -a ${WORKSPACE}/run.log
+          exit 1
+        fi
       fi
 }
 

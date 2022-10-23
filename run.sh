@@ -10,7 +10,7 @@ PORT=6001
 USER=dump
 PASS=111
 SCALE=1
-QUERY="ALL"
+QUERY="all"
 while getopts ":h:P:u:p:s:q:glcH" opt
 do
     case $opt in
@@ -151,6 +151,7 @@ function query() {
       else
         echo -e "TThe query ${QUERY}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
         echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
+        exit 1
       fi
     else
        for sql in queries/*
@@ -168,6 +169,7 @@ function query() {
 	         echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${name}.res | tee -a ${WORKSPACE}/run.log
          else
            echo -e "TThe query ${QUERY}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
+           exit 1
            #echo -e "\n"
          fi
        done

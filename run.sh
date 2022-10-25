@@ -4,6 +4,9 @@ if [[ $# -eq 0 ]];then
     echo "No parameters provided,please use -H to get help. "
 fi
 
+TIMES=1
+STATUS=0
+
 WORKSPACE=$(cd `dirname $0`; pwd)
 SERVER="127.0.0.1"
 PORT=6001
@@ -11,7 +14,7 @@ USER=dump
 PASS=111
 SCALE=1
 QUERY="all"
-while getopts ":h:P:u:p:s:q:glcH" opt
+while getopts ":h:P:u:p:s:q:t:glcH" opt
 do
     case $opt in
         h)
@@ -28,6 +31,15 @@ do
         ;;
         s)
         SCALE=${OPTARG}
+        ;;
+        t)
+        expr ${OPTARG} "+" 10 &> /dev/null
+        if [ $? -ne 0 ]; then
+          echo 'The times ['${OPTARG}'] is not a number'
+          exit 1
+        fi
+        TIMES=${OPTARG}
+        echo -e "The times that run tpch test for : ${OPTARG}"
         ;;
         g)
         METHOD="GEN"
@@ -51,6 +63,7 @@ do
         echo -e "   -p  mo server password of the user[-u]"
         echo -e "   -s  the scale of the tpch data ,unit G,default is 1G"
         echo -e "   -q  run the tpch query sql,and can specify the certain query by q[1-22],or all"
+        echo -e "   -t  the times that run the tpch queries"
         echo -e "   -g  generate the tpch data,must specify scale through -s"
         echo -e "   -l  load the tpch data to mo server,must specify scale by -s,and the mo server info by -h,-P,-u,-p"
         echo -e "   -c  create the table in mo server,must specify the mo server info by -h,-P,-u,-p"
@@ -141,35 +154,36 @@ function query() {
     if [ "${QUERY}"x != "all"x ];then
       echo -e "Now start to execute the query ${QUERY},please wait....." | tee -a ${WORKSPACE}/run.log
       startTime=`date +%s.%N`
-      result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql`
+      result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql 2>&1` | tee -a ${WORKSPACE}/run.log
       if [ $? -eq 0 ];then
         endTime=`date +%s.%N`
         getTiming $startTime $endTime
         echo -e "The query ${QUERY}  has been executed successfully,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
-        echo "${QUERY}:${cost}" >> ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
-        echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
+        echo "${QUERY}:${cost}" | tee -a ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
+        echo "${result}" | tee -a ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
       else
+        STATUS=1
         echo -e "TThe query ${QUERY}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
-        echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
-        exit 1
+        echo "${result}" | tee -a ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
       fi
     else
        for sql in queries/*
        do
          QUERY=${sql}
 	       local name=`basename ${sql} .sql`
-         echo -e "Now start to execute the query ${QUERY},please wait....."
+         echo -e "Now start to execute the query ${QUERY},please wait....." | tee -a ${WORKSPACE}/run.log
          startTime=`date +%s.%N`
-         result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < ${QUERY}` | tee -a ${WORKSPACE}/run.log
+         result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < ${QUERY} 2>&1` | tee -a ${WORKSPACE}/run.log
          if [ $? -eq 0 ];then
            endTime=`date +%s.%N`
            getTiming $startTime $endTime
            echo -e "The query ${QUERY}  has been executed successfully,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
-	         echo "${name} : ${cost}" >> ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
-	         echo "${result}" > ${WORKSPACE}/report/res_${SCALE}/${name}.res | tee -a ${WORKSPACE}/run.log
+	         echo "${name} : ${cost}"  | tee -a ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
+	         echo "${result}"  | tee -a ${WORKSPACE}/report/res_${SCALE}/${name}.res | tee -a ${WORKSPACE}/run.log
          else
+           STATUS=1
            echo -e "TThe query ${QUERY}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
-           exit 1
+           echo "${result}"  | tee -a ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
            #echo -e "\n"
          fi
        done
@@ -235,14 +249,58 @@ if [ "${METHOD}"x = "LOAD"x ];then
 fi
 
 if [ "${METHOD}"x = "QUERY"x ];then
-  #echo "${QUERY}"
-  query
-  exit 0
+  if [ ${TIMES} -eq 1 ]; then
+    echo "This test will be only run for 1 times" | tee -a ${WORKSPACE}/run.log
+    query
+    if [ $STATUS -eq 1 ];then
+      echo "This test has been failed, more info, please see the log" | tee -a ${WORKSPACE}/run.log
+      exit 1
+    fi
+  else
+    echo "This test will be run for ${TIMES} times"
+    for i in $(seq 1 ${TIMES})
+      do
+        echo "The ${i} turn test has started, please wait......." | tee -a ${WORKSPACE}/run.log
+        query
+        echo "The ${i} turn test has ended, and test report is in ./report/${i} dir." | tee -a ${WORKSPACE}/run.log
+        mkdir -p ${WORKSPACE}/report/${i}/
+        mv ${WORKSPACE}/report/*.txt ${WORKSPACE}/report/${i}/
+        mv ${WORKSPACE}/report/res_* ${WORKSPACE}/report/${i}/
+      done
+      
+    if [ $STATUS -eq 1 ];then
+      echo "This test has been failed, more info, please see the log" | tee -a ${WORKSPACE}/run.log
+      exit 1
+    fi
+  fi
 fi
 
 if [ "${METHOD}"x = x ];then
   gen
   ctab
   load
-  query
+  if [ ${TIMES} -eq 1 ]; then
+      echo "This test will be only run for 1 times" | tee -a ${WORKSPACE}/run.log
+      query
+      if [ $STATUS -eq 1 ];then
+        echo "This test has been failed, more info, please see the log" | tee -a ${WORKSPACE}/run.log
+        exit 1
+      fi
+    else
+      echo "This test will be run for ${TIMES} times"
+      for i in $(seq 1 ${TIMES})
+        do
+          echo "The ${i} turn test has started, please wait......." | tee -a ${WORKSPACE}/run.log
+          query
+          echo "The ${i} turn test has ended, and test report is in ./report/${i} dir." | tee -a ${WORKSPACE}/run.log
+          mkdir -p ${WORKSPACE}/report/${i}/
+          mv ${WORKSPACE}/report/*.txt ${WORKSPACE}/report/${i}/
+          mv ${WORKSPACE}/report/res_* ${WORKSPACE}/report/${i}/
+        done
+        
+      if [ $STATUS -eq 1 ];then
+        echo "This test has been failed, more info, please see the log" | tee -a ${WORKSPACE}/run.log
+        exit 1
+      fi
+    fi
 fi

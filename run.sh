@@ -123,14 +123,15 @@ function load() {
     DBNAME=tpch_${SCALE/./_}g
     for tbl in data/${SCALE}/*.tbl
     do
+      echo -e ""
       local table=`basename ${tbl} .tbl`
       local sql="load data infile '${WORKSPACE}/${tbl}' into table ${DBNAME}.${table} FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n';"
       echo -e "Loading ${tbl} in to table ${table},please wait....."
       echo "${sql}"
       startTime=`date +%s.%N`
-      mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} -e "${sql}" 2>/dev/null
+      mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} -e "${sql}"
       if [ $? -eq 0 ];then
-	      endTime=`date +%s.%N`
+	endTime=`date +%s.%N`
         getTiming $startTime $endTime
         echo -e "The data for table ${table} has been loaded successfully,,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
       else
@@ -145,7 +146,7 @@ function query() {
     if [ ! -d ${WORKSPACE}/report/ ];then
         mkdir -p ${WORKSPACE}/report/
     fi
-    if [ ! -d ${WORKSPACE}/report/rees_${SCALE}/ ];then
+    if [ ! -d ${WORKSPACE}/report/res_${SCALE}/ ];then
         mkdir -p ${WORKSPACE}/report/res_${SCALE}/
     fi
     rm -rf ${WORKSPACE}/report/rt_${SCALE}.txt
@@ -154,36 +155,39 @@ function query() {
     if [ "${QUERY}"x != "all"x ];then
       echo -e "Now start to execute the query ${QUERY},please wait....." | tee -a ${WORKSPACE}/run.log
       startTime=`date +%s.%N`
-      result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql 2>&1` | tee -a ${WORKSPACE}/run.log
+      result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < queries/${QUERY}.sql 2>&1`
       if [ $? -eq 0 ];then
         endTime=`date +%s.%N`
         getTiming $startTime $endTime
         echo -e "The query ${QUERY}  has been executed successfully,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
-        echo "${QUERY}:${cost}" | tee -a ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
-        echo "${result}" | tee -a ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
+        echo -e ""
+	echo "${QUERY}:${cost}" >> ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
+        echo "${result}" | awk 'NR>1' > ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
       else
         STATUS=1
         echo -e "TThe query ${QUERY}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
-        echo "${result}" | tee -a ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
+        echo -e ""
+	echo "${result}" | awk 'NR>1' | tee -a ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
       fi
     else
        for sql in queries/*
        do
-         QUERY=${sql}
-	       local name=`basename ${sql} .sql`
-         echo -e "Now start to execute the query ${QUERY},please wait....." | tee -a ${WORKSPACE}/run.log
+	 local name=`basename ${sql} .sql`
+         echo -e "Now start to execute the query ${sql},please wait....." | tee -a ${WORKSPACE}/run.log
          startTime=`date +%s.%N`
-         result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < ${QUERY} 2>&1` | tee -a ${WORKSPACE}/run.log
+         result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < ${sql} 2>&1`
          if [ $? -eq 0 ];then
            endTime=`date +%s.%N`
            getTiming $startTime $endTime
-           echo -e "The query ${QUERY}  has been executed successfully,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
-	         echo "${name} : ${cost}"  | tee -a ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
-	         echo "${result}"  | tee -a ${WORKSPACE}/report/res_${SCALE}/${name}.res | tee -a ${WORKSPACE}/run.log
+           echo -e "The query ${sql}  has been executed successfully,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
+	   echo -e ""
+	   echo "${name} : ${cost}"  >>  ${WORKSPACE}/report/rt_${SCALE}.txt | tee -a ${WORKSPACE}/run.log
+	   echo "${result}" | awk 'NR>1' >  ${WORKSPACE}/report/res_${SCALE}/${name}.res | tee -a ${WORKSPACE}/run.log
          else
            STATUS=1
            echo -e "TThe query ${QUERY}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
-           echo "${result}"  | tee -a ${WORKSPACE}/report/res_${SCALE}/${QUERY}.res | tee -a ${WORKSPACE}/run.log
+           echo -e ""
+	   echo "${result}" | awk 'NR>1' | tee -a  ${WORKSPACE}/report/res_${SCALE}/${name}.res | tee -a ${WORKSPACE}/run.log
            #echo -e "\n"
          fi
        done
@@ -262,9 +266,9 @@ if [ "${METHOD}"x = "QUERY"x ];then
       do
         echo "The ${i} turn test has started, please wait......." | tee -a ${WORKSPACE}/run.log
         query
-        echo "The ${i} turn test has ended, and test report is in ./report/${i} dir." | tee -a ${WORKSPACE}/run.log
         mkdir -p ${WORKSPACE}/report/${i}/
-        mv ${WORKSPACE}/report/*.txt ${WORKSPACE}/report/${i}/
+        rm -rf ${WORKSPACE}/report/${i}/*
+	mv ${WORKSPACE}/report/*.txt ${WORKSPACE}/report/${i}/
         mv ${WORKSPACE}/report/res_* ${WORKSPACE}/report/${i}/
       done
       
@@ -277,10 +281,17 @@ fi
 
 if [ "${METHOD}"x = x ];then
   gen
+  echo -e ""
+  
   ctab
+  echo -e ""
+  
   load
+  echo -e ""
+
   if [ ${TIMES} -eq 1 ]; then
       echo "This test will be only run for 1 times" | tee -a ${WORKSPACE}/run.log
+      echo -e ""
       query
       if [ $STATUS -eq 1 ];then
         echo "This test has been failed, more info, please see the log" | tee -a ${WORKSPACE}/run.log
@@ -291,9 +302,11 @@ if [ "${METHOD}"x = x ];then
       for i in $(seq 1 ${TIMES})
         do
           echo "The ${i} turn test has started, please wait......." | tee -a ${WORKSPACE}/run.log
-          query
-          echo "The ${i} turn test has ended, and test report is in ./report/${i} dir." | tee -a ${WORKSPACE}/run.log
-          mkdir -p ${WORKSPACE}/report/${i}/
+          echo -e ""
+	  query
+          echo -e ""
+	  mkdir -p ${WORKSPACE}/report/${i}/
+	  rm -rf ${WORKSPACE}/report/${i}/*
           mv ${WORKSPACE}/report/*.txt ${WORKSPACE}/report/${i}/
           mv ${WORKSPACE}/report/res_* ${WORKSPACE}/report/${i}/
         done

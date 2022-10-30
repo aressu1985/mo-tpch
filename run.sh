@@ -125,6 +125,7 @@ function load() {
     do
       local table=`basename ${tbl} .tbl`
       local sql="load data infile '${WORKSPACE}/${tbl}' into table ${DBNAME}.${table} FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n';"
+      echo -e ""
       echo -e "Loading ${tbl} in to table ${table},please wait....."
       echo "${sql}"
       startTime=`date +%s.%N`
@@ -171,6 +172,7 @@ function query() {
        do
          QUERY=${sql}
 	       local name=`basename ${sql} .sql`
+	       echo -e ""
          echo -e "Now start to execute the query ${QUERY},please wait....." | tee -a ${WORKSPACE}/run.log
          startTime=`date +%s.%N`
          result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < ${QUERY} 2>&1` | tee -a ${WORKSPACE}/run.log

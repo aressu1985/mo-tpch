@@ -173,10 +173,10 @@ function query() {
     else
        for sql in queries/*
        do
-         QUERY=${sql}
+         #QUERY=${sql}
 	       local name=`basename ${sql} .sql`
 	       echo -e ""
-         echo -e "Now start to execute the query ${QUERY},please wait....." | tee -a ${WORKSPACE}/run.log
+         echo -e "Now start to execute the query ${sql},please wait....." | tee -a ${WORKSPACE}/run.log
          startTime=`date +%s.%N`
          result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} ${DBNAME} < ${sql} 2>&1`
          if [ $? -eq 0 ];then
@@ -188,7 +188,7 @@ function query() {
 	   echo "${result}" | awk 'NR>1' >  ${WORKSPACE}/report/res_${SCALE}/${name}.res | tee -a ${WORKSPACE}/run.log
          else
            STATUS=1
-           echo -e "TThe query ${QUERY}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
+           echo -e "TThe query ${sql}  has failed to  been executed." | tee -a ${WORKSPACE}/run.log
            echo -e ""
 	   echo "${result}" | awk 'NR>1' | tee -a  ${WORKSPACE}/report/res_${SCALE}/${name}.res | tee -a ${WORKSPACE}/run.log
            #echo -e "\n"

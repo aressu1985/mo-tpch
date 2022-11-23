@@ -57,10 +57,11 @@ do
         ;;
         H)
         echo -e "Usage:　bash run.sh [option] [param] ...\nExcute mo tpch task"
-        echo -e "   -h  mo server address"
-        echo -e "   -P  mo server port"
-        echo -e "   -u  mo server username"
-        echo -e "   -p  mo server password of the user[-u]"
+        echo -e "   -h  mo server address, default value is 127.0.0.1"
+        echo -e "   -P  mo server port, default value is 6001"
+        echo -e "   -d  mo database name, default value is tpch_{SCALE}g"
+        echo -e "   -u  mo server username, default value is dump"
+        echo -e "   -p  mo server password of the user[-u], default value is 111"
         echo -e "   -s  the scale of the tpch data ,unit G,default is 1G"
         echo -e "   -q  run the tpch query sql,and can specify the certain query by q[1-22],or all"
         echo -e "   -t  the times that run the tpch queries"
@@ -113,6 +114,7 @@ function ctab() {
   if [ $? -eq 0 ];then
     echo -e "`date +'%Y-%m-%d %H:%M:%S'` The tables for tpch has been created successfully." | tee -a ${WORKSPACE}/run.log
   else
+    echo -e "`date +'%Y-%m-%d %H:%M:%S'` ${result}"
     echo -e "`date +'%Y-%m-%d %H:%M:%S'` The tables for tpch has been created failed." | tee -a ${WORKSPACE}/run.log
     exit 1
   fi
@@ -120,7 +122,10 @@ function ctab() {
 
 function load() {
     echo -e "`date +'%Y-%m-%d %H:%M:%S'` Start to load tpch ${SCALE}G data to mo server,please wait....." | tee -a ${WORKSPACE}/run.log
-    DBNAME=tpch_${SCALE/./_}g
+    if [ "${DBNAME}"x == x ]; then
+      DBNAME=tpch_${SCALE/./_}g
+    fi 
+    
     for tbl in data/${SCALE}/*.tbl
     do
       echo -e ""
@@ -154,7 +159,10 @@ function query() {
     
     rm -rf ${WORKSPACE}/report/rt_${SCALE}.txt
     
-    DBNAME=tpch_${SCALE/./_}g
+    if [ "${DBNAME}"x == x ]; then
+      DBNAME=tpch_${SCALE/./_}g
+    fi 
+        
     if [ "${QUERY}"x != "all"x ];then
       echo -e "`date +'%Y-%m-%d %H:%M:%S'` Now start to execute the query ${QUERY},please wait....." | tee -a ${WORKSPACE}/run.log
       startTime=`date +%s.%N`

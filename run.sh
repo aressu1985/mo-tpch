@@ -14,7 +14,7 @@ USER=dump
 PASS=111
 SCALE=1
 QUERY="all"
-while getopts ":h:P:u:p:s:q:t:glcH" opt
+while getopts ":h:P:d:u:p:s:q:t:glcH" opt
 do
     case $opt in
         h)

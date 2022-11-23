@@ -68,7 +68,8 @@ do
         echo -e "   -d  mo database name, default value is tpch_{SCALE}g"
         echo -e "   -u  mo server username, default value is dump"
         echo -e "   -p  mo server password of the user[-u], default value is 111"
-        echo -e "   -s  the scale of the tpch data ,unit G,default is 1G"
+        echo -e "   -s  the scale of the tpch data, unit G,default is 1G"
+        echo -e "   -f  the path that tpch data loaded is from, default is ./data/"
         echo -e "   -q  run the tpch query sql,and can specify the certain query by q[1-22],or all"
         echo -e "   -t  the times that run the tpch queries"
         echo -e "   -g  generate the tpch data,must specify scale through -s"
@@ -140,7 +141,7 @@ function load() {
     do
       echo -e ""
       local table=`basename ${tbl} .tbl`
-      local sql="load data infile '${WORKSPACE}/${tbl}' into table ${DBNAME}.${table} FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n';"
+      local sql="load data infile '${tbl}' into table ${DBNAME}.${table} FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n';"
       echo -e ""
       echo -e "`date +'%Y-%m-%d %H:%M:%S'` Loading ${tbl} in to table ${table},please wait....."
       echo -e "`date +'%Y-%m-%d %H:%M:%S'` ${sql}"
@@ -149,7 +150,7 @@ function load() {
       if [ $? -eq 0 ];then
 	      endTime=`date +%s.%N`
         getTiming $startTime $endTime
-        echo -e "`date +'%Y-%m-%d %H:%M:%S'` The data for table ${table} has been loaded successfully,,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
+        echo -e "`date +'%Y-%m-%d %H:%M:%S'` The data for table ${table} has been loaded successfully, and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
       else
         echo -e "`date +'%Y-%m-%d %H:%M:%S'` ${result}"
         echo -e "`date +'%Y-%m-%d %H:%M:%S'` The data for table ${table} has failed to be loaded." | tee -a ${WORKSPACE}/run.log

@@ -23,6 +23,9 @@ do
         P)
         PORT=${OPTARG}
         ;;
+        d)
+        DBNAME=${OPTARG}
+        ;;
         u)
         USER="${OPTARG}"
         ;;

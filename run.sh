@@ -109,7 +109,7 @@ function ctab() {
   echo -e "`date +'%Y-%m-%d %H:%M:%S'` Start to creat table for tpch test in mo server,please wait....."| tee -a ${WORKSPACE}/run.log
   cp mo.ddl tpch_table_temp.sql
   sed -i  's/tpch_${SCALE}g/tpch_'${SCALE/./_}'g/g' tpch_table_temp.sql
-  result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} < tpch_table_temp.sql`
+  result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} < tpch_table_temp.sql 2>&1`
   if [ $? -eq 0 ];then
     echo -e "`date +'%Y-%m-%d %H:%M:%S'` The tables for tpch has been created successfully." | tee -a ${WORKSPACE}/run.log
   else
@@ -128,14 +128,15 @@ function load() {
       local sql="load data infile '${WORKSPACE}/${tbl}' into table ${DBNAME}.${table} FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n';"
       echo -e ""
       echo -e "`date +'%Y-%m-%d %H:%M:%S'` Loading ${tbl} in to table ${table},please wait....."
-      echo "${sql}"
+      echo -e "`date +'%Y-%m-%d %H:%M:%S'` ${sql}"
       startTime=`date +%s.%N`
-      mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} -e "${sql}"
+      result=`mysql -h${SERVER} -P${PORT} -u${USER} -p${PASS} -e "${sql}" 2>&1`
       if [ $? -eq 0 ];then
 	      endTime=`date +%s.%N`
         getTiming $startTime $endTime
         echo -e "`date +'%Y-%m-%d %H:%M:%S'` The data for table ${table} has been loaded successfully,,and cost: ${cost}" | tee -a ${WORKSPACE}/run.log
       else
+        echo -e "`date +'%Y-%m-%d %H:%M:%S'` ${result}"
         echo -e "`date +'%Y-%m-%d %H:%M:%S'` The data for table ${table} has failed to be loaded." | tee -a ${WORKSPACE}/run.log
         exit 1
       fi

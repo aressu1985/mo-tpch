@@ -14,7 +14,7 @@ USER=dump
 PASS=111
 SCALE=1
 QUERY="all"
-while getopts ":h:P:d:u:p:s:q:t:glcH" opt
+while getopts ":h:P:d:u:p:s:f:q:t:glcH" opt
 do
     case $opt in
         h)
@@ -34,6 +34,9 @@ do
         ;;
         s)
         SCALE=${OPTARG}
+        ;;
+        f)
+        SOURCE=${OPTARG}
         ;;
         t)
         expr ${OPTARG} "+" 10 &> /dev/null
@@ -127,9 +130,13 @@ function load() {
     echo -e "`date +'%Y-%m-%d %H:%M:%S'` Start to load tpch ${SCALE}G data to mo server,please wait....." | tee -a ${WORKSPACE}/run.log
     if [ "${DBNAME}"x == x ]; then
       DBNAME=tpch_${SCALE/./_}g
-    fi 
+    fi
     
-    for tbl in data/${SCALE}/*.tbl
+    if [ "${SOURCE}"x == x ]; then
+      SOURCE=data/${SCALE}
+    fi
+    
+    for tbl in ${SOURCE}/*.tbl
     do
       echo -e ""
       local table=`basename ${tbl} .tbl`

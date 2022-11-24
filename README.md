@@ -19,6 +19,10 @@ Checkout [Install MatrixOne](https://docs.matrixorigin.io/0.4.0/MatrixOne/Get-St
 Or you can launch whatever database software as you want. 
 
 ### 2. Fork and clone this mo-tpch project. 
+
+```
+git clone https://github.com/matrixorigin/mo-tpch.git
+```
 ### 3. Compile the TPCH data generation tool
 ```
 > cd dbgen
